@@ -1,27 +1,14 @@
-async function Connect(client) {
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
+const dbUrl = process.env.DB_URL;
+
+async function Connect() {
   try {
-    await client.connect();
+    await mongoose.connect(dbUrl); // its an async function so we need to await it and we are using try catch block to catch any error
     console.log("Connected correctly to server");
   } catch (err) {
     console.log(err.stack);
   }
 }
-
-async function run(client) {
-  try {
-    const database = client.db("sample_airbnb");
-    const movies = database.collection("listingsAndReviews");
-    const query = { name: "Ribeira Charming Duplex" };
-    const movie = await movies.findOne(query);
-    console.log(movie);
-  } catch (err) {
-    console.log(err.stack);
-  }
-}
-
-const functions = {
-  Connect: Connect,
-  run: run,
-};
-module.exports = functions;
-// add package.json to git ignore
+export default Connect;
