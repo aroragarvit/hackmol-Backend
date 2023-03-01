@@ -22,7 +22,9 @@ const server = app.listen(port, async () => {
   console.log("Server is running on port " + port + "on host " + host);
   await Connect();
 });
-
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 app.post("/signup", signup);
 app.post("/login", login);
 app.get("/protected", verifyToken, (req, res) => {
