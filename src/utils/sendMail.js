@@ -17,7 +17,7 @@ export async function sendMail(email, token) {
       from: process.env.EMAIL,
       to: email,
       subject: "Email Verification",
-      text: `localhost:5000/verify?token=${token}`,
+      text: `https://collegebackend.onrender.com/verify?token=${token}`,
     };
 
     await transporter.sendMail(mailOptions);
