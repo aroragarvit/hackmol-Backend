@@ -1,16 +1,19 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
-import { User } from "./models/user.mjs";
-import { signup } from "./controllers/appController.js";
+import cookieParser from "cookie-parser";
+
 const app = express();
+import { verifyToken } from "./middleware/verifyJWT.js";
+app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
 app.use(morgan("tiny"));
 app.disable("x-powered-by"); // disable the x-powered-by header in the response to prevent information leakage about the server software used to handle the request
 
 const port = process.env.PORT;
-
+import { signup, login, logout } from "./controllers/appController.js";
+import { verifyEmail } from "./middleware/verifyMail.js";
 import Connect from "./utils/connect.js"; // importing connect function from utils folder
 const server = app.listen(port, async () => {
   console.log(server.address);
@@ -20,30 +23,15 @@ const server = app.listen(port, async () => {
   await Connect();
 });
 
-app.post("/signup", async function (req, res) {
-  try {
-    const { username, email, password } = req.body;
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    // write code in case we have both email and username for existing user
-
-    if (existingUser) {
-      if (existingUser.username === username) {
-        return res.status(400).json({ error: "Username already exists" });
-      } else if (existingUser.email === email) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-    }
-
-    const user = new User({ username, email, password });
-    await user.save();
-
-    return res.status(201).json({ message: "User created successfully" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+app.post("/signup", signup);
+app.post("/login", login);
+app.get("/protected", verifyToken, (req, res) => {
+  console.log("hello");
+  res.end();
 });
-
+app.get("/verify", verifyEmail);
+app.post("/logout", verifyToken, logout);
+//app.post("/onboard", verifyToken, onboard);
 app.use(function (req, res, next) {
   res.status(404).sendFile("./views/404.html", { root: __dirname });
 });
