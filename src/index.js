@@ -7,10 +7,10 @@ import jwt from "jsonwebtoken";
 import createServer from "http";
 import Server from "socket.io";
 import { verifyToken } from "./middleware/verifyJWT.js";
-import { signup, login, logout } from "./controllers/appController.js";
+import { signup, login, logout, onboard } from "./controllers/appController.js";
 import { verifyEmail } from "./middleware/verifyMail.js";
 import Connect from "./utils/connect.js";
-import { onboard } from "./controllers/onboardController.js";
+import { Room } from "./models/roomSchema.mjs";
 
 const app = express();
 const port = process.env.PORT;
