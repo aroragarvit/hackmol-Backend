@@ -67,7 +67,7 @@ app.disable("x-powered-by");
 app.use(function (req, res, next) {
   res.header(
     "Access-Control-Allow-Origin",
-    "https://collegebackend.onrender.com"
+    "https://localhost:3000, https://localhost:3001"
   );
   res.header("Access-Control-Allow-Credentials", true);
   next();
