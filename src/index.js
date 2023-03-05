@@ -52,6 +52,12 @@ io.on("connection", async (socket) => {
     }
   });
 
+  socket.on("message", (data) => {
+    const { id } = socket.client;
+    const { roomId, message } = data;
+    io.to(roomId).emit("message", { userId: id, message });
+  });
+
   // Handle "disconnect" event
   socket.on("disconnect", () => {
     console.log("Client disconnected");
@@ -65,10 +71,7 @@ app.use(express.json());
 app.use(morgan("tiny"));
 app.disable("x-powered-by");
 app.use(function (req, res, next) {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://localhost:3000, https://localhost:3001"
-  );
+  res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Credentials", true);
   next();
 });
