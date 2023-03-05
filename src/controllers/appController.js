@@ -20,21 +20,18 @@ export async function signup(req, res) {
     }
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     // write code in case we have both email and username for existing user
-
     if (existingUser) {
-      if (existingUser.username === username) {
+      if (existingUser.email === email && existingUser.username === username) {
+        return res
+          .status(400)
+          .json({ error: "Username and email already exist" });
+      } else if (existingUser.username === username) {
         return res.status(400).json({ error: "Username already exists" });
       } else if (existingUser.email === email) {
         return res.status(400).json({ error: "Email already exists" });
-      } else if (
-        existingUser.email === email &&
-        existingUser.username === username
-      ) {
-        return res
-          .status(400)
-          .json({ error: "Username and enail already exist" });
       }
     }
+
     // verification of email address using sending email to the user and then verifying the email address
 
     const emailVerificationToken = jwt.sign(
@@ -77,11 +74,12 @@ export async function login(req, res) {
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
+
   if (!user.emailVerified) {
-    await User.deleteOne({ _id: user._id });
+    await sendMail(user.email, user.emailVerificationToken);
     return res
       .status(401)
-      .json({ error: "Email not verified Not a valid user" });
+      .json({ error: "Email not verified. Verification email sent." });
   }
 
   const isMatch = await user.comparePassword(password);
@@ -118,6 +116,7 @@ export async function login(req, res) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 }
+
 export async function logout(req, res) {
   res.clearCookie("token");
 

@@ -4,8 +4,8 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 
-import createServer from "http";
-import Server from "socket.io";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import { verifyToken } from "./middleware/verifyJWT.js";
 import { signup, login, logout, onboard } from "./controllers/appController.js";
 import { verifyEmail } from "./middleware/verifyMail.js";
