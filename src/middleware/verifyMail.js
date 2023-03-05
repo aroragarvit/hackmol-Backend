@@ -8,18 +8,13 @@ export async function verifyEmail(req, res, next) {
       return res.status(400).json({ error: "Token not found" });
     }
 
-    const decdoded_mail = jwt.verify(token, process.env.JWT_SECRET);
+    const decdoded_mail = jwt.verify(token, process.env.JWT_SECRET); // agar decode nahi hua matlab token invalid , matlab jo email dal raha ha vo bhi invalid ha because jo mail dal raha ha usi pa mail ja raha ha , ha to user database sa check nahi hoga kyuki user kuch ayaga hi nahi decode hoka
 
     const user = await User.findOneAndUpdate(
       { email: decdoded_mail.email, emailVerificationToken: token },
       { emailVerified: true, emailVerificationToken: null }
     );
-    // we are getting the token in email of same person we have in database saved  and then we are decoding the token and then we are
-    // finding the user with the email and then we are updating the emailVerified to true and
-    // then we are setting the emailVerificationToken to null
-    // means we are getting the main so mail is valid and we are setting mail verified to true for that mail
-    // so in login we can check if the mail is verified or not
-    // If in login if mail is not verified then we can send mail to the user to verify the mail
+
     if (!user) {
       return res
         .status(400)
