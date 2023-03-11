@@ -1,9 +1,8 @@
 import jwt from "jsonwebtoken";
 
 export async function verifyToken(req, res, next) {
-  console.log("hello");
   const token = req.cookies.token || req.headers.authorization;
-  console.log(token);
+
   if (!token) {
     return res.status(401).json({ error: "Unauthorized ! NO token exists" });
   }
