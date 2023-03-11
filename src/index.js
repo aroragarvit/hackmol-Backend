@@ -38,35 +38,61 @@ app.use(function (req, res, next) {
   next();
 });
 
-io.on("connection", async (socket) => {
-  // Use socket authentication middleware to verify token
+io.use(async (socket, next) => {
   console.log("Socket use effect going to run");
-  io.use(async (socket, next) => {
-    const token = socket.handshake.query.token;
-    if (!token) {
-      return next(new Error("Authentication error - no token provided"));
-    }
-    try {
-      const decoded = await jwt.verify(token, process.env.JWT_SECRET);
-      socket.decoded = decoded;
-      console.log("Authenticated");
-      next();
-    } catch (error) {
-      return next(new Error("Authentication error"));
-    }
-  });
-
+  const token = socket.handshake.query.token;
+  if (!token) {
+    return next(new Error("Authentication error - no token provided"));
+  }
+  try {
+    console.log("verifying Token");
+    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    socket.decoded = decoded;
+    console.log("Authenticated On socket connection");
+    next();
+  } catch (error) {
+    console.log(error);
+    return next(new Error("Authentication error"));
+  }
+});
+io.on("connection", async (socket) => {
+  // verify authenticated on each event also
+  // Use socket authentication middleware to verify token
+  console.log(
+    "client connected with id " +
+      socket.id +
+      " and Name  " +
+      socket.decoded.username
+  );
+  //
   // Handle "join room" event
   socket.on("join room", async (data) => {
-    console.log("New client connected");
     const { id } = socket.client;
     console.log("id", id);
     const interests = data.interests;
+    const currentRoom = await Room.findOne({ users: id });
+    if (currentRoom) {
+      // Remove the user from the current room's users list
+      currentRoom.users = currentRoom.users.filter((userId) => userId !== id);
+      await currentRoom.save();
+      console.log(`Removed client ${id} from room ${currentRoom._id}`);
+      // If there's only one user left in the current room, delete the room
+      if (currentRoom.users.length === 0) {
+        await Room.findByIdAndDelete(currentRoom._id);
+        console.log(`Deleted room ${currentRoom._id}`);
+      }
+    }
     const rooms = await Room.find({ interests: { $in: interests } });
+    console.log("rooms with similar insters", rooms);
     if (rooms.length) {
+      console.log("Found a room");
       const room = rooms.find((room) => room.users.length === 1);
       if (room) {
+        console.log("Found a room with one user");
         socket.join(room._id);
+        room.users.push(id);
+        await room.save();
+
         io.to(room._id).emit("user joined", { userId: id });
       } else {
         const newRoom = await Room.create({ interests, users: [id] });
@@ -80,15 +106,10 @@ io.on("connection", async (socket) => {
     }
   });
 
-  socket.on("message", (data) => {
-    const { id } = socket.client;
-    const { roomId, message } = data;
-    io.to(roomId).emit("message", { userId: id, message });
-  });
-
   // Handle "disconnect" event
   socket.on("disconnect", async () => {
-    console.log(`Client ${id} disconnected`);
+    const { id } = socket.client;
+    console.log(`Client  disconnected`);
     const room = await Room.findOne({ users: id });
     if (room) {
       // Remove the user from the room's users list

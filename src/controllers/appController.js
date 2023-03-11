@@ -60,7 +60,9 @@ export async function signup(req, res) {
 
     await sendMail(email, emailVerificationToken);
 
-    return res.status(201).json({ message: "User created successfully" });
+    return res.status(201).json({
+      message: "User created successfully And email verification mail sent",
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Internal server error" });
@@ -103,6 +105,8 @@ export async function login(req, res) {
         res.cookie("token", token, {
           httpOnly: false,
           maxAge: 3600000, // 1 hour
+          path: "/",
+          domain: "localhost",
         });
 
         return res.status(200).send({
@@ -125,9 +129,9 @@ export async function logout(req, res) {
 
   return res.status(200).send({ msg: "Logged out successfully" });
 }
-
 export async function onboard(req, res) {
   // run this after protected middleware so that we can get the id from the token
+  console.log("ONBOARDING");
   try {
     const user = await User.findById(req.id); // we are gtting id from verifyJWT.js middleware using payload decoding from token and setting it to req.id
     if (!user) {
