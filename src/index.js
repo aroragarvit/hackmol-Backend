@@ -67,19 +67,32 @@ io.on("connection", async (socket) => {
   //
   // Handle "join room" event
   socket.on("join room", async (data) => {
-    const { id } = socket.client;
+    const id = socket.id;
     console.log("id", id);
     const interests = data.interests;
     const currentRoom = await Room.findOne({ users: id });
     if (currentRoom) {
       // Remove the user from the current room's users list
+      socket.leave(currentRoom._id.toString()); // leave the room
       currentRoom.users = currentRoom.users.filter((userId) => userId !== id);
       await currentRoom.save();
-      console.log(`Removed client ${id} from room ${currentRoom._id}`);
+      // broadcast to person left in the room that the other person left
+      await socket.to(currentRoom._id.toString()).emit("user left", {
+        userId: id,
+        userName: socket.decoded.username,
+        roomId: currentRoom._id.toString(),
+      }); // If click again and already in a room then leave the room and broadcast to other person in the room
+      console.log(
+        `Removed client ${id} from room ${currentRoom._id.toString()}`
+      );
       // If there's only one user left in the current room, delete the room
       if (currentRoom.users.length === 0) {
-        await Room.findByIdAndDelete(currentRoom._id);
-        console.log(`Deleted room ${currentRoom._id}`);
+        await Room.findByIdAndDelete(currentRoom._id.toString());
+        socket.leave(currentRoom._id.toString()); // leave the room
+        await socket.emit("room deleted", {
+          roomId: currentRoom._id.toString(),
+        }); // Emit if a room is deleted so that the user can be redirected or something
+        console.log(`Deleted room ${currentRoom._id.toString()}`);
       }
     }
     const rooms = await Room.find({ interests: { $in: interests } });
@@ -89,20 +102,45 @@ io.on("connection", async (socket) => {
       const room = rooms.find((room) => room.users.length === 1);
       if (room) {
         console.log("Found a room with one user");
-        socket.join(room._id);
+        console.log("ID of joined room", room._id.toString());
+        await socket.join(room._id.toString());
+
         room.users.push(id);
         await room.save();
 
-        io.to(room._id).emit("user joined", { userId: id });
+        const roomClients = Array.from(
+          io.sockets.adapter.rooms.get(room._id.toString())
+        );
+        console.log("roomClients", roomClients);
+
+        const users = await room.users;
+        console.log("users", users);
+
+        await io.to(room._id.toString()).emit("user joined", {
+          userId: id,
+          userName: socket.decoded.username,
+          roomID: room._id.toString(),
+        }); // Emit to the other person in the room that the other person joined
       } else {
         const newRoom = await Room.create({ interests, users: [id] });
         console.log("newRoom");
-        socket.join(newRoom._id);
+        console.log("ID of new room", newRoom._id.toString());
+        socket.join(newRoom._id.toString());
+        const roomClients = io.sockets.adapter.rooms.get(
+          newRoom._id.toString()
+        );
+        console.log("roomClients", roomClients);
+        await socket.emit("new room created", {
+          roomId: newRoom._id.toString(),
+        }); // Emit to the user that a new room is created (so that the user can be redirected or something)
       }
     } else {
       const newRoom = await Room.create({ interests, users: [id] });
-      console.log("newRoom");
-      socket.join(newRoom._id);
+      console.log("ID of new room", newRoom._id.toString());
+      socket.join(newRoom._id.toString());
+      const roomClients = io.sockets.adapter.rooms.get(newRoom._id.toString());
+      console.log("roomClients", roomClients);
+      await socket.emit("new room created", { roomId: newRoom._id.toString() }); // Emit to the user that a new room is created (so that the user can be redirected or something)
     }
   });
 
@@ -115,11 +153,11 @@ io.on("connection", async (socket) => {
       // Remove the user from the room's users list
       room.users = room.users.filter((userId) => userId !== id);
       await room.save();
-      console.log(`Removed client ${id} from room ${room._id}`);
+      console.log(`Removed client ${id} from room ${room._id.toString()}`);
       // If there's only one user left in the room, delete the room
       if (room.users.length === 0) {
-        await Room.findByIdAndDelete(room._id);
-        console.log(`Deleted room ${room._id}`);
+        await Room.findByIdAndDelete(room._id.toString());
+        console.log(`Deleted room ${room._id.toString()}`);
       }
     }
   });
